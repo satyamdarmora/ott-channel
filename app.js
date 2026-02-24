@@ -19,6 +19,8 @@
     {ch:17, name:"Allu Arjun",     cat:"Movies", lang:"Telugu", handle:"AlluArjun",        desc:"Pushpa, Ala Vaikunthapurramuloo clips"},
     {ch:18, name:"ABP Studios",    cat:"OTT",    lang:"Hindi",  handle:"ABPStudios",       desc:"ABP originals & web series"},
     {ch:19, name:"Mahabharat",     cat:"OTT",    lang:"Hindi",  handle:"PenBhakti",        desc:"BR Chopra's Mahabharat - all episodes"},
+    {ch:20, name:"Devon Ke Dev Mahadev", cat:"OTT", lang:"Hindi", playlistId:"PLtW7SFqfLw4-4L_LpLuXSgOfQE5KH3X4B", desc:"247 episodes"},
+    {ch:21, name:"Hotstar",  cat:"OTT", lang:"Hindi", url:"https://www.hotstar.com", desc:"Disney+ Hotstar live"},
   ];
 
   let currentIndex = 0;
@@ -33,7 +35,8 @@
   let errorCount = 0;
   const MAX_ERRORS = 5;
   let skipAttempts = 0;
-  const MAX_SKIP = 19;
+  const MAX_SKIP = 21;
+  let shuffleMode = false; // default: sequential
 
   const $ = id => document.getElementById(id);
   const banner = $('channel-banner');
@@ -85,10 +88,55 @@
     ytReady = true;
     ytPlayer.mute();
     $('btn-mute').textContent = 'UNMUTE';
+    updateShuffleBtn();
     buildGuide();
-    tuneToChannel(0);
+    // Restore last channel (e.g. after returning from Hotstar via back button)
+    let startCh = 0;
+    try {
+      const saved = localStorage.getItem('ott_last_channel');
+      if (saved !== null) startCh = parseInt(saved, 10) || 0;
+    } catch(e) {}
+    tuneToChannel(startCh);
   }
 
+  // --- Progress save/restore (all channels) ---
+  function getProgress(ch) {
+    try {
+      const key = 'ott_progress_' + (ch.playlistId || ch.handle);
+      return JSON.parse(localStorage.getItem(key) || '{}');
+    } catch (e) { return {}; }
+  }
+
+  function saveProgress(ch, index, time) {
+    try {
+      const key = 'ott_progress_' + (ch.playlistId || ch.handle);
+      localStorage.setItem(key, JSON.stringify({ index: index, time: Math.floor(time) }));
+    } catch (e) {}
+  }
+
+  let saveInterval = null;
+  function startSaving() {
+    stopSaving();
+    saveInterval = setInterval(() => {
+      if (!ytPlayer) return;
+      const ch = channels[currentIndex];
+      if (!ch) return;
+      try {
+        const state = ytPlayer.getPlayerState();
+        if (state === YT.PlayerState.PLAYING || state === YT.PlayerState.PAUSED) {
+          const idx = ytPlayer.getPlaylistIndex();
+          const time = ytPlayer.getCurrentTime();
+          if (idx >= 0 && time > 0) saveProgress(ch, idx, time);
+        }
+      } catch (e) {}
+    }, 5000);
+  }
+
+  function stopSaving() {
+    if (saveInterval) { clearInterval(saveInterval); saveInterval = null; }
+  }
+
+  // --- Tuning ---
   let tuneSeq = 0;
   let switchDebounce = null;
 
@@ -104,6 +152,7 @@
     showBanner(ch);
     showStatic();
     updateGuideActive();
+    try { localStorage.setItem('ott_last_channel', index); } catch(e) {}
 
     clearTimeout(switchDebounce);
     switchDebounce = setTimeout(() => {
@@ -114,7 +163,42 @@
 
   function loadChannel(ch, seq) {
     if (!ytReady || !ytPlayer) return;
+    stopSaving();
 
+    // URL-based channel
+    if (ch.url) {
+      hideStatic();
+      if (window.OttApp) {
+        // Android app — show in overlay WebView, controls stay active
+        window.OttApp.showUrl(ch.url);
+      } else {
+        // Web browser — show overlay with open button
+        showUrlOverlay(ch);
+      }
+      return;
+    }
+    // Hide overlay when switching to non-URL channel
+    if (window.OttApp) window.OttApp.hideUrl();
+    hideUrlOverlay();
+
+    // Playlist-based channel (e.g., DKDM) — use YouTube playlist directly
+    if (ch.playlistId) {
+      const progress = shuffleMode ? {} : getProgress(ch);
+      ytPlayer.loadPlaylist({
+        list: ch.playlistId,
+        listType: 'playlist',
+        index: progress.index || 0,
+        startSeconds: progress.time || 0,
+      });
+      if (shuffleMode) {
+        setTimeout(() => { try { ytPlayer.setShuffle(true); } catch(e){} }, 1000);
+      }
+      startSaving();
+      waitForPlayback(seq);
+      return;
+    }
+
+    // Video ID-based channel (from videos.json)
     const videos = videoDb[ch.handle] || [];
 
     if (videos.length === 0) {
@@ -129,10 +213,18 @@
     }
     skipAttempts = 0;
 
-    const shuffled = [...videos].sort(() => Math.random() - 0.5);
+    let playlist;
+    if (shuffleMode) {
+      playlist = [...videos].sort(() => Math.random() - 0.5);
+    } else {
+      playlist = [...videos];
+    }
+
+    const progress = shuffleMode ? {} : getProgress(ch);
+    const startIdx = progress.index || 0;
 
     // Play first video immediately for fast start
-    ytPlayer.loadVideoById(shuffled[0]);
+    ytPlayer.loadVideoById({ videoId: playlist[startIdx] || playlist[0], startSeconds: progress.time || 0 });
 
     // After playback starts, load full playlist for continuous play
     let playlistLoaded = false;
@@ -142,17 +234,18 @@
         if (ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
           clearInterval(checkPlaying);
           hideStatic();
-          // Now load full shuffled playlist in background
-          if (!playlistLoaded && shuffled.length > 1) {
+          if (!playlistLoaded && playlist.length > 1) {
             playlistLoaded = true;
             setTimeout(() => {
               if (seq !== tuneSeq) return;
-              ytPlayer.loadPlaylist(shuffled.slice(0, 30), 0);
+              ytPlayer.loadPlaylist(playlist, startIdx, progress.time || 0);
             }, 2000);
           }
         }
       } catch (e) {}
     }, 200);
+
+    startSaving();
 
     // Timeout — hide static after 6s
     setTimeout(() => {
@@ -160,12 +253,29 @@
       if (seq !== tuneSeq) return;
       hideStatic();
       try {
-        const state = ytPlayer.getPlayerState();
-        if (state !== YT.PlayerState.PLAYING) {
-          ytPlayer.playVideo();
-        }
+        if (ytPlayer.getPlayerState() !== YT.PlayerState.PLAYING) ytPlayer.playVideo();
       } catch (e) {}
     }, 6000);
+  }
+
+  function waitForPlayback(seq) {
+    const checkPlaying = setInterval(() => {
+      if (seq !== tuneSeq) { clearInterval(checkPlaying); return; }
+      try {
+        if (ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+          clearInterval(checkPlaying);
+          hideStatic();
+          skipAttempts = 0;
+        }
+      } catch (e) {}
+    }, 300);
+
+    setTimeout(() => {
+      clearInterval(checkPlaying);
+      if (seq !== tuneSeq) return;
+      hideStatic();
+      try { if (ytPlayer.getPlayerState() !== YT.PlayerState.PLAYING) ytPlayer.playVideo(); } catch (e) {}
+    }, 8000);
   }
 
   function onPlayerStateChange(event) {
@@ -195,11 +305,31 @@
     }
   }
 
-  // Banner
+  // --- Shuffle toggle ---
+  function toggleShuffle() {
+    shuffleMode = !shuffleMode;
+    updateShuffleBtn();
+    // Reload current channel with new mode
+    tuneToChannel(currentIndex);
+  }
+
+  function updateShuffleBtn() {
+    const btn = $('btn-shuffle');
+    if (btn) btn.textContent = shuffleMode ? 'SEQUENTIAL' : 'SHUFFLE';
+  }
+
+  // --- Banner ---
   function showBanner(ch) {
     $('banner-number').textContent = ch.ch;
     $('banner-name').textContent = ch.name;
-    $('banner-desc').textContent = ch.desc || '';
+    let desc = ch.desc || '';
+    if (!shuffleMode) {
+      const progress = getProgress(ch);
+      if (progress.index > 0) desc = 'Resuming from #' + (progress.index + 1);
+    } else {
+      desc = (ch.desc || '') + ' (shuffle)';
+    }
+    $('banner-desc').textContent = desc;
     $('banner-meta').textContent = ch.lang + ' \u2022 ' + ch.cat;
     $('banner-category').textContent = ch.cat;
     banner.classList.remove('hidden', 'hiding');
@@ -212,6 +342,29 @@
 
   function showError(name) { errorOverlay.classList.remove('hidden'); $('error-channel-name').textContent = name; }
   function hideError() { errorOverlay.classList.add('hidden'); }
+
+  function showUrlOverlay(ch) {
+    let overlay = $('url-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'url-overlay';
+      overlay.style.cssText = 'position:absolute;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#0a1a2e 0%,#000 70%)';
+      $('app').appendChild(overlay);
+    }
+    overlay.innerHTML =
+      '<div style="text-align:center;padding:20px">' +
+        '<div style="font-size:32px;font-weight:700;margin-bottom:8px">' + ch.name + '</div>' +
+        '<div style="font-size:15px;color:#888;margin-bottom:30px">' + (ch.desc || '') + '</div>' +
+        '<a href="' + ch.url + '" target="_blank" rel="noopener" style="display:inline-block;padding:16px 40px;background:#e50914;color:#fff;font-size:18px;font-weight:700;text-decoration:none;border-radius:8px">OPEN ' + ch.name.toUpperCase() + '</a>' +
+        '<div style="font-size:12px;color:#555;margin-top:20px">Opens in new tab. Use CH+/CH- to switch channels.</div>' +
+      '</div>';
+    overlay.classList.remove('hidden');
+  }
+
+  function hideUrlOverlay() {
+    const overlay = $('url-overlay');
+    if (overlay) overlay.classList.add('hidden');
+  }
 
   function showStatic() { staticOverlay.classList.remove('hidden'); drawStatic(); }
   function hideStatic() { staticOverlay.classList.add('hidden'); }
@@ -234,7 +387,7 @@
     frame();
   }
 
-  // Navigation
+  // --- Navigation ---
   function nextChannel() { tuneToChannel(currentIndex + 1); }
   function prevChannel() { tuneToChannel(currentIndex - 1); }
   function goToChannelNumber(num) {
@@ -261,18 +414,21 @@
     return false;
   };
 
-  // Guide
+  // --- Guide ---
   function buildGuide() {
     const list = $('guide-list');
     list.innerHTML = '';
     const filtered = activeFilter === 'All' ? channels : channels.filter(c => c.cat === activeFilter);
     filtered.forEach(ch => {
       const i = channels.indexOf(ch);
+      const progress = getProgress(ch);
       const item = document.createElement('div');
       item.className = 'guide-item' + (i === currentIndex ? ' active' : '');
+      let progressText = '';
+      if (progress.index > 0) progressText = ' <span class="guide-progress">▶ #' + (progress.index + 1) + '</span>';
       item.innerHTML =
         '<span class="guide-ch">' + ch.ch + '</span>' +
-        '<div class="guide-info"><div class="guide-name">' + ch.name + '</div><div class="guide-desc">' + (ch.desc || '') + '</div></div>' +
+        '<div class="guide-info"><div class="guide-name">' + ch.name + progressText + '</div><div class="guide-desc">' + (ch.desc || '') + '</div></div>' +
         '<span class="guide-cat">' + ch.cat + '</span>';
       item.onclick = () => { tuneToChannel(i); toggleGuide(); };
       list.appendChild(item);
@@ -311,13 +467,14 @@
   $('btn-ch-up').onclick = prevChannel;
   $('btn-ch-down').onclick = nextChannel;
   $('btn-guide-toggle').onclick = toggleGuide;
+  $('btn-shuffle').onclick = toggleShuffle;
   $('btn-mute').onclick = () => {
     if (!ytPlayer) return;
     if (ytPlayer.isMuted()) { ytPlayer.unMute(); $('btn-mute').textContent = 'MUTE'; }
     else { ytPlayer.mute(); $('btn-mute').textContent = 'UNMUTE'; }
   };
 
-  // Keyboard
+  // --- Keyboard ---
   document.addEventListener('keydown', e => {
     if (guideOpen && e.key === 'Escape') { toggleGuide(); return; }
     if (guideOpen) return;
@@ -325,6 +482,7 @@
       case 'ArrowUp': case 'k': e.preventDefault(); prevChannel(); break;
       case 'ArrowDown': case 'j': e.preventDefault(); nextChannel(); break;
       case 'g': case 'G': toggleGuide(); break;
+      case 's': case 'S': toggleShuffle(); break;
       case 'm': case 'M':
         if (!ytPlayer) break;
         if (ytPlayer.isMuted()) { ytPlayer.unMute(); $('btn-mute').textContent = 'MUTE'; }
@@ -349,7 +507,7 @@
     }
   });
 
-  // Touch swipe
+  // --- Touch swipe ---
   let touchStartY = 0;
   document.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
   document.addEventListener('touchend', e => {

@@ -189,6 +189,7 @@ body {
 .guide-info { flex: 1; }
 .guide-name { font-size: 15px; font-weight: 600; }
 .guide-desc { font-size: 11px; color: #666; margin-top: 2px; }
+.guide-progress { color: #e50914; font-size: 10px; margin-left: 6px; }
 .guide-cat {
   font-size: 10px; text-transform: uppercase;
   letter-spacing: 1px; color: #555;
