@@ -411,11 +411,13 @@
     }, 1200);
   }
 
-  // Expose for Android back button
+  // Expose for Android native controls
   window.handleAndroidBack = function() {
     if (guideOpen) { toggleGuide(); return true; }
     return false;
   };
+  window.channelUp = function() { prevChannel(); };
+  window.channelDown = function() { nextChannel(); };
 
   // --- Guide ---
   function buildGuide() {
