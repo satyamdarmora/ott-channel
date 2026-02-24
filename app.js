@@ -109,12 +109,25 @@
     if (!ytReady || !ytPlayer) return;
 
     if (ch.playlistId) {
+      // Stop current video first to ensure clean switch
+      try { ytPlayer.stopVideo(); } catch (e) {}
+
       // Load YouTube uploads playlist directly — no scraping needed!
-      ytPlayer.loadPlaylist({
+      // Use cuePlaylist + playVideo for more reliable switching
+      ytPlayer.cuePlaylist({
         list: ch.playlistId,
         listType: 'playlist',
-        index: Math.floor(Math.random() * 50), // random start position
+        index: 0,
       });
+
+      // Small delay then start playback and shuffle
+      setTimeout(() => {
+        if (seq !== tuneSeq) return;
+        try {
+          ytPlayer.setShuffle(true);
+          ytPlayer.playVideo();
+        } catch (e) {}
+      }, 500);
 
       // Wait for playback to start
       const checkPlaying = setInterval(() => {
@@ -129,18 +142,18 @@
         } catch (e) {}
       }, 300);
 
-      // Timeout — hide static after 10s regardless
+      // Timeout — hide static after 15s regardless
       setTimeout(() => {
         clearInterval(checkPlaying);
         if (seq !== tuneSeq) return;
         hideStatic();
         try {
           const state = ytPlayer.getPlayerState();
-          if (state === YT.PlayerState.CUED || state === YT.PlayerState.PAUSED || state === -1) {
+          if (state !== YT.PlayerState.PLAYING) {
             ytPlayer.playVideo();
           }
         } catch (e) {}
-      }, 10000);
+      }, 15000);
     }
   }
 
