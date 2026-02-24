@@ -118,7 +118,6 @@
     const videos = videoDb[ch.handle] || [];
 
     if (videos.length === 0) {
-      // No videos — auto-skip to next channel
       skipAttempts++;
       if (skipAttempts < MAX_SKIP) {
         tuneToChannel(currentIndex + 1);
@@ -130,36 +129,43 @@
     }
     skipAttempts = 0;
 
-    // Shuffle and pick up to 50 videos
     const shuffled = [...videos].sort(() => Math.random() - 0.5);
-    const playlist = shuffled.slice(0, 50);
 
-    // Load as video ID array
-    ytPlayer.loadPlaylist(playlist, 0);
+    // Play first video immediately for fast start
+    ytPlayer.loadVideoById(shuffled[0]);
 
-    // Wait for playback to start
+    // After playback starts, load full playlist for continuous play
+    let playlistLoaded = false;
     const checkPlaying = setInterval(() => {
       if (seq !== tuneSeq) { clearInterval(checkPlaying); return; }
       try {
         if (ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
           clearInterval(checkPlaying);
           hideStatic();
+          // Now load full shuffled playlist in background
+          if (!playlistLoaded && shuffled.length > 1) {
+            playlistLoaded = true;
+            setTimeout(() => {
+              if (seq !== tuneSeq) return;
+              ytPlayer.loadPlaylist(shuffled.slice(0, 30), 0);
+            }, 2000);
+          }
         }
       } catch (e) {}
-    }, 300);
+    }, 200);
 
-    // Timeout — hide static after 10s
+    // Timeout — hide static after 6s
     setTimeout(() => {
       clearInterval(checkPlaying);
       if (seq !== tuneSeq) return;
       hideStatic();
       try {
         const state = ytPlayer.getPlayerState();
-        if (state === YT.PlayerState.CUED || state === YT.PlayerState.PAUSED || state === -1) {
+        if (state !== YT.PlayerState.PLAYING) {
           ytPlayer.playVideo();
         }
       } catch (e) {}
-    }, 10000);
+    }, 6000);
   }
 
   function onPlayerStateChange(event) {
