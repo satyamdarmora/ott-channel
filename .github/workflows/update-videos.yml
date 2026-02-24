@@ -1,0 +1,97 @@
+name: Update Video IDs
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch: # Manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch video IDs for all channels
+        run: |
+          python3 << 'PYEOF'
+          import urllib.request
+          import re
+          import json
+          import time
+
+          channels = [
+              {"handle": "TheViralFever"},
+              {"handle": "DiceMediaIndia"},
+              {"handle": "Girliyapa"},
+              {"handle": "setindia"},
+              {"handle": "SonyLIV"},
+              {"handle": "MXPlayerOfficial"},
+              {"handle": "amazonminitv"},
+              {"handle": "ZEE5"},
+              {"handle": "StageApp"},
+              {"handle": "FilterCopy"},
+              {"handle": "BBKiVines"},
+              {"handle": "Round2hell"},
+              {"handle": "Comicstaan"},
+              {"handle": "zakirkhan"},
+              {"handle": "ShemarooMe"},
+              {"handle": "YRFMovies"},
+              {"handle": "AlluArjun"},
+              {"handle": "ABPStudios"},
+              {"handle": "PenBhakti"},
+          ]
+
+          headers = {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+              'Accept-Language': 'en-US,en;q=0.9',
+              'Accept': 'text/html,application/xhtml+xml',
+              'Cookie': 'CONSENT=YES+cb.20240101-00-p0.en+FX+999; SOCS=CAISNQgDEitib3FfaWRlbnRpdHlmcm9udGVuZHVpc2VydmVyXzIwMjMwODI5LjA3X3AxGgJlbiADGgYIgIa3rwY',
+          }
+
+          result = {}
+          for ch in channels:
+              handle = ch["handle"]
+              videos = []
+              for path in [f"/@{handle}/videos", f"/@{handle}"]:
+                  try:
+                      req = urllib.request.Request(f"https://www.youtube.com{path}", headers=headers)
+                      with urllib.request.urlopen(req, timeout=20) as resp:
+                          html = resp.read().decode("utf-8", errors="ignore")
+                      ids = []
+                      seen = set()
+                      for m in re.finditer(r'"videoId"\s*:\s*"([a-zA-Z0-9_-]{11})"', html):
+                          vid = m.group(1)
+                          if vid not in seen:
+                              seen.add(vid)
+                              ids.append(vid)
+                      if ids:
+                          videos = ids
+                          break
+                  except Exception as e:
+                      print(f"  Error {handle}{path}: {e}")
+                  time.sleep(1)
+
+              result[handle] = videos
+              print(f"  {handle}: {len(videos)} videos")
+              time.sleep(1)
+
+          with open("videos.json", "w") as f:
+              json.dump(result, f)
+
+          total = sum(len(v) for v in result.values())
+          print(f"\nTotal: {total} videos across {len(result)} channels")
+          PYEOF
+
+      - name: Commit updated videos.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add videos.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update video IDs [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+            git push
+          fi

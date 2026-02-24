@@ -1,26 +1,24 @@
 (() => {
-  // All channels with their YouTube uploads playlist IDs
-  // No server needed — YouTube IFrame API loads playlists directly
   const channels = [
-    {ch:1,  name:"TVF Originals",  cat:"OTT",    lang:"Hindi",  playlistId:"UUNyeSfUfffmJXwA2_tmNG9A", desc:"Panchayat, Kota Factory, Aspirants & more"},
-    {ch:2,  name:"Dice Media",     cat:"OTT",    lang:"Hindi",  playlistId:"UU7IMq6lLHbptAnSucW1pClA", desc:"Little Things, Operation MBBS & more"},
-    {ch:3,  name:"Girliyapa",      cat:"OTT",    lang:"Hindi",  playlistId:"UUNJcSUSzUeFm8W9P7UUlSeQ", desc:"TVF's women-led comedy channel"},
-    {ch:4,  name:"Sony SET India", cat:"OTT",    lang:"Hindi",  playlistId:"UUpEhnqL0y41EpW2TvWAHD7Q", desc:"CID, Taarak Mehta, KBC full episodes"},
-    {ch:5,  name:"SonyLIV",        cat:"OTT",    lang:"Hindi",  playlistId:"UUOQNJjhXwvAScuELTT_i7cQ", desc:"Scam 1992, Rocket Boys, Gullak"},
-    {ch:6,  name:"MX Player",      cat:"OTT",    lang:"Hindi",  playlistId:"UU6q2O2pOJ-LiFKm4w2EW73w", desc:"Aashram, Raktanchal, Campus Diaries"},
-    {ch:7,  name:"Amazon miniTV",  cat:"OTT",    lang:"Hindi",  playlistId:"UUXx65thnOelDlV5dFM-A-9A", desc:"Free originals & short films"},
-    {ch:8,  name:"Zee5",           cat:"OTT",    lang:"Hindi",  playlistId:"UUXOgAl4w-FQero1ERbGHpXQ", desc:"Zee5 originals & shows"},
-    {ch:9,  name:"Stage",          cat:"OTT",    lang:"Hindi",  playlistId:"UUFOvK1jc0KoaHtNNJjhSyLA", desc:"Stand-up, sketches & originals"},
-    {ch:10, name:"FilterCopy",     cat:"Comedy", lang:"Hindi",  playlistId:"UUC89oVFqenaffhBoyqxd6qw", desc:"Relatable sketches & short films"},
-    {ch:11, name:"BB Ki Vines",    cat:"Comedy", lang:"Hindi",  playlistId:"UUUxNHDxPFjuKMdMPAsYVJMQ", desc:"Bhuvan Bam's comedy universe"},
-    {ch:12, name:"Round2Hell",     cat:"Comedy", lang:"Hindi",  playlistId:"UUOjRVCxaNntzhUhwUF-xCFA", desc:"Sketch comedy & viral videos"},
-    {ch:13, name:"Comicstaan",     cat:"Comedy", lang:"Hindi",  playlistId:"UUp2unPosbRMp4qsQNIZQ7oQ", desc:"Stand-up comedy from Amazon"},
-    {ch:14, name:"Zakir Khan",     cat:"Comedy", lang:"Hindi",  playlistId:"UUkS7Vxu4PjM99w0Is6idjcg", desc:"Sakht launda stand-up & vlogs"},
-    {ch:15, name:"Shemaroo",       cat:"Movies", lang:"Hindi",  playlistId:"UUyA7Ut9tuAHxxmRqrsu9HDQ", desc:"Full Bollywood movies & scenes free"},
-    {ch:16, name:"YRF Movies",     cat:"Movies", lang:"Hindi",  playlistId:"UUU8LF98Njvux51LYGLgXiaw", desc:"Yash Raj Films - full movies & songs"},
-    {ch:17, name:"Allu Arjun",     cat:"Movies", lang:"Telugu", playlistId:"UULiwEQsSEmXe4ShFVJk_hAQ", desc:"Pushpa, Ala Vaikunthapurramuloo clips"},
-    {ch:18, name:"ABP Studios",    cat:"OTT",    lang:"Hindi",  playlistId:"UUiEhTEINhyi0JJwmi1Ekn9w", desc:"ABP originals & web series"},
-    {ch:19, name:"Mahabharat",     cat:"OTT",    lang:"Hindi",  playlistId:"UU8xZGtXSrtbxg4WvtSpSXcA", desc:"BR Chopra's Mahabharat - all episodes"},
+    {ch:1,  name:"TVF Originals",  cat:"OTT",    lang:"Hindi",  handle:"TheViralFever",    desc:"Panchayat, Kota Factory, Aspirants & more"},
+    {ch:2,  name:"Dice Media",     cat:"OTT",    lang:"Hindi",  handle:"DiceMediaIndia",   desc:"Little Things, Operation MBBS & more"},
+    {ch:3,  name:"Girliyapa",      cat:"OTT",    lang:"Hindi",  handle:"Girliyapa",        desc:"TVF's women-led comedy channel"},
+    {ch:4,  name:"Sony SET India", cat:"OTT",    lang:"Hindi",  handle:"setindia",         desc:"CID, Taarak Mehta, KBC full episodes"},
+    {ch:5,  name:"SonyLIV",        cat:"OTT",    lang:"Hindi",  handle:"SonyLIV",          desc:"Scam 1992, Rocket Boys, Gullak"},
+    {ch:6,  name:"MX Player",      cat:"OTT",    lang:"Hindi",  handle:"MXPlayerOfficial", desc:"Aashram, Raktanchal, Campus Diaries"},
+    {ch:7,  name:"Amazon miniTV",  cat:"OTT",    lang:"Hindi",  handle:"amazonminitv",     desc:"Free originals & short films"},
+    {ch:8,  name:"Zee5",           cat:"OTT",    lang:"Hindi",  handle:"ZEE5",             desc:"Zee5 originals & shows"},
+    {ch:9,  name:"Stage",          cat:"OTT",    lang:"Hindi",  handle:"StageApp",         desc:"Stand-up, sketches & originals"},
+    {ch:10, name:"FilterCopy",     cat:"Comedy", lang:"Hindi",  handle:"FilterCopy",       desc:"Relatable sketches & short films"},
+    {ch:11, name:"BB Ki Vines",    cat:"Comedy", lang:"Hindi",  handle:"BBKiVines",        desc:"Bhuvan Bam's comedy universe"},
+    {ch:12, name:"Round2Hell",     cat:"Comedy", lang:"Hindi",  handle:"Round2hell",       desc:"Sketch comedy & viral videos"},
+    {ch:13, name:"Comicstaan",     cat:"Comedy", lang:"Hindi",  handle:"Comicstaan",       desc:"Stand-up comedy from Amazon"},
+    {ch:14, name:"Zakir Khan",     cat:"Comedy", lang:"Hindi",  handle:"zakirkhan",        desc:"Sakht launda stand-up & vlogs"},
+    {ch:15, name:"Shemaroo",       cat:"Movies", lang:"Hindi",  handle:"ShemarooMe",       desc:"Full Bollywood movies & scenes free"},
+    {ch:16, name:"YRF Movies",     cat:"Movies", lang:"Hindi",  handle:"YRFMovies",        desc:"Yash Raj Films - full movies & songs"},
+    {ch:17, name:"Allu Arjun",     cat:"Movies", lang:"Telugu", handle:"AlluArjun",        desc:"Pushpa, Ala Vaikunthapurramuloo clips"},
+    {ch:18, name:"ABP Studios",    cat:"OTT",    lang:"Hindi",  handle:"ABPStudios",       desc:"ABP originals & web series"},
+    {ch:19, name:"Mahabharat",     cat:"OTT",    lang:"Hindi",  handle:"PenBhakti",        desc:"BR Chopra's Mahabharat - all episodes"},
   ];
 
   let currentIndex = 0;
@@ -31,11 +29,11 @@
   let activeFilter = 'All';
   let ytPlayer = null;
   let ytReady = false;
+  let videoDb = {}; // handle -> [videoIds]
   let errorCount = 0;
   const MAX_ERRORS = 5;
   let skipAttempts = 0;
   const MAX_SKIP = 19;
-  const failedChannels = new Set();
 
   const $ = id => document.getElementById(id);
   const banner = $('channel-banner');
@@ -45,6 +43,15 @@
   const numberInput = $('number-input');
   const numberDisplay = $('number-display');
   const errorOverlay = $('error-overlay');
+
+  // Load video database (pre-generated by GitHub Actions)
+  fetch('videos.json')
+    .then(r => r.json())
+    .then(data => {
+      videoDb = data;
+      console.log('Loaded video database:', Object.keys(data).length, 'channels');
+    })
+    .catch(e => console.error('Failed to load videos.json:', e));
 
   // Load YouTube IFrame API
   const tag = document.createElement('script');
@@ -108,53 +115,51 @@
   function loadChannel(ch, seq) {
     if (!ytReady || !ytPlayer) return;
 
-    if (ch.playlistId) {
-      // Stop current video first to ensure clean switch
-      try { ytPlayer.stopVideo(); } catch (e) {}
+    const videos = videoDb[ch.handle] || [];
 
-      // Load YouTube uploads playlist directly — no scraping needed!
-      // Use cuePlaylist + playVideo for more reliable switching
-      ytPlayer.cuePlaylist({
-        list: ch.playlistId,
-        listType: 'playlist',
-        index: 0,
-      });
-
-      // Small delay then start playback and shuffle
-      setTimeout(() => {
-        if (seq !== tuneSeq) return;
-        try {
-          ytPlayer.setShuffle(true);
-          ytPlayer.playVideo();
-        } catch (e) {}
-      }, 500);
-
-      // Wait for playback to start
-      const checkPlaying = setInterval(() => {
-        if (seq !== tuneSeq) { clearInterval(checkPlaying); return; }
-        try {
-          const state = ytPlayer.getPlayerState();
-          if (state === YT.PlayerState.PLAYING) {
-            clearInterval(checkPlaying);
-            hideStatic();
-            skipAttempts = 0;
-          }
-        } catch (e) {}
-      }, 300);
-
-      // Timeout — hide static after 15s regardless
-      setTimeout(() => {
-        clearInterval(checkPlaying);
-        if (seq !== tuneSeq) return;
+    if (videos.length === 0) {
+      // No videos — auto-skip to next channel
+      skipAttempts++;
+      if (skipAttempts < MAX_SKIP) {
+        tuneToChannel(currentIndex + 1);
+      } else {
         hideStatic();
-        try {
-          const state = ytPlayer.getPlayerState();
-          if (state !== YT.PlayerState.PLAYING) {
-            ytPlayer.playVideo();
-          }
-        } catch (e) {}
-      }, 15000);
+        showError(ch.name);
+      }
+      return;
     }
+    skipAttempts = 0;
+
+    // Shuffle and pick up to 50 videos
+    const shuffled = [...videos].sort(() => Math.random() - 0.5);
+    const playlist = shuffled.slice(0, 50);
+
+    // Load as video ID array
+    ytPlayer.loadPlaylist(playlist, 0);
+
+    // Wait for playback to start
+    const checkPlaying = setInterval(() => {
+      if (seq !== tuneSeq) { clearInterval(checkPlaying); return; }
+      try {
+        if (ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+          clearInterval(checkPlaying);
+          hideStatic();
+        }
+      } catch (e) {}
+    }, 300);
+
+    // Timeout — hide static after 10s
+    setTimeout(() => {
+      clearInterval(checkPlaying);
+      if (seq !== tuneSeq) return;
+      hideStatic();
+      try {
+        const state = ytPlayer.getPlayerState();
+        if (state === YT.PlayerState.CUED || state === YT.PlayerState.PAUSED || state === -1) {
+          ytPlayer.playVideo();
+        }
+      } catch (e) {}
+    }, 10000);
   }
 
   function onPlayerStateChange(event) {
@@ -169,19 +174,16 @@
   }
 
   function onPlayerError(event) {
-    console.log('YT error:', event.data);
     errorCount++;
     if (errorCount < MAX_ERRORS && ytPlayer) {
       ytPlayer.nextVideo();
     } else {
-      const ch = channels[currentIndex];
-      if (ch) failedChannels.add(ch.playlistId);
       skipAttempts++;
       if (skipAttempts < MAX_SKIP) {
-        console.log('Too many errors on ' + (ch ? ch.name : '?') + ', skipping...');
         tuneToChannel(currentIndex + 1);
       } else {
         hideStatic();
+        const ch = channels[currentIndex];
         if (ch) showError(ch.name + ' (videos blocked)');
       }
     }
@@ -202,17 +204,10 @@
     }, 4000);
   }
 
-  function showError(name) {
-    errorOverlay.classList.remove('hidden');
-    $('error-channel-name').textContent = name;
-  }
+  function showError(name) { errorOverlay.classList.remove('hidden'); $('error-channel-name').textContent = name; }
   function hideError() { errorOverlay.classList.add('hidden'); }
 
-  // Static
-  function showStatic() {
-    staticOverlay.classList.remove('hidden');
-    drawStatic();
-  }
+  function showStatic() { staticOverlay.classList.remove('hidden'); drawStatic(); }
   function hideStatic() { staticOverlay.classList.add('hidden'); }
 
   function drawStatic() {
@@ -254,6 +249,12 @@
     }, 1200);
   }
 
+  // Expose for Android back button
+  window.handleAndroidBack = function() {
+    if (guideOpen) { toggleGuide(); return true; }
+    return false;
+  };
+
   // Guide
   function buildGuide() {
     const list = $('guide-list');
@@ -291,12 +292,6 @@
     }
   }
 
-  // Expose for Android back button
-  window.handleAndroidBack = function() {
-    if (guideOpen) { toggleGuide(); return true; }
-    return false;
-  };
-
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.onclick = () => {
       document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -318,7 +313,7 @@
 
   // Keyboard
   document.addEventListener('keydown', e => {
-    if (guideOpen && (e.key === 'Escape' || e.keyCode === 4)) { toggleGuide(); return; }
+    if (guideOpen && e.key === 'Escape') { toggleGuide(); return; }
     if (guideOpen) return;
     switch (e.key) {
       case 'ArrowUp': case 'k': e.preventDefault(); prevChannel(); break;
