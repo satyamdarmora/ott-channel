@@ -20,7 +20,10 @@
     {ch:18, name:"ABP Studios",    cat:"OTT",    lang:"Hindi",  handle:"ABPStudios",       desc:"ABP originals & web series"},
     {ch:19, name:"Mahabharat",     cat:"OTT",    lang:"Hindi",  handle:"PenBhakti",        desc:"BR Chopra's Mahabharat - all episodes"},
     {ch:20, name:"Devon Ke Dev Mahadev", cat:"OTT", lang:"Hindi", playlistId:"PLtW7SFqfLw4-4L_LpLuXSgOfQE5KH3X4B", desc:"247 episodes"},
-    {ch:21, name:"Hotstar",  cat:"OTT", lang:"Hindi", url:"https://www.hotstar.com", desc:"Disney+ Hotstar live"},
+    {ch:21, name:"Hotstar",      cat:"OTT",   lang:"Hindi", url:"https://www.hotstar.com", desc:"Disney+ Hotstar"},
+    {ch:22, name:"SonyLIV App",  cat:"OTT",   lang:"Hindi", url:"https://www.sonyliv.com", desc:"SonyLIV streaming"},
+    {ch:23, name:"Prime Video",  cat:"OTT",   lang:"Hindi", url:"https://www.primevideo.com", desc:"Amazon Prime Video"},
+    {ch:24, name:"Kuku FM",      cat:"OTT",   lang:"Hindi", url:"https://www.kukufm.com", desc:"Audio stories & podcasts"},
   ];
 
   let currentIndex = 0;
@@ -35,7 +38,7 @@
   let errorCount = 0;
   const MAX_ERRORS = 5;
   let skipAttempts = 0;
-  const MAX_SKIP = 21;
+  const MAX_SKIP = 24;
   let shuffleMode = false; // default: sequential
 
   const $ = id => document.getElementById(id);
