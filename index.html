@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>OTT Channel - Watch Like Cable TV</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <div id="video-container">
+      <div id="yt-player-wrap">
+        <div id="yt-player"></div>
+      </div>
+      <div id="static-overlay" class="hidden">
+        <canvas id="static-canvas"></canvas>
+        <div id="tuning-text">Tuning...</div>
+      </div>
+      <div id="error-overlay" class="hidden">
+        <div id="error-content">
+          <div id="error-icon">&#128250;</div>
+          <div id="error-channel-name"></div>
+          <div id="error-msg">Channel unavailable right now</div>
+          <div id="error-hint">Press CH+ or CH- to switch</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="channel-banner" class="hidden">
+      <div id="banner-number"></div>
+      <div id="banner-info">
+        <div id="banner-name"></div>
+        <div id="banner-desc"></div>
+        <div id="banner-meta"></div>
+      </div>
+      <div id="banner-category"></div>
+    </div>
+
+    <div id="number-input" class="hidden">
+      <span id="number-display"></span>
+    </div>
+
+    <div id="guide" class="hidden">
+      <div id="guide-header">
+        <h2>OTT Channels</h2>
+        <div id="guide-close" title="Close">&times;</div>
+        <div id="guide-filters">
+          <button class="filter-btn active" data-cat="All">All</button>
+          <button class="filter-btn" data-cat="OTT">OTT</button>
+          <button class="filter-btn" data-cat="Comedy">Comedy</button>
+          <button class="filter-btn" data-cat="Movies">Movies</button>
+        </div>
+      </div>
+      <div id="guide-list"></div>
+    </div>
+
+    <div id="remote">
+      <button id="btn-ch-up" class="remote-btn" title="Channel Up">CH &#9650;</button>
+      <button id="btn-guide-toggle" class="remote-btn guide-btn" title="Channel Guide">GUIDE</button>
+      <button id="btn-mute" class="remote-btn guide-btn" title="Mute">MUTE</button>
+      <button id="btn-ch-down" class="remote-btn" title="Channel Down">CH &#9660;</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
