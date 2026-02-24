@@ -1,0 +1,345 @@
+(() => {
+  // All channels with their YouTube uploads playlist IDs
+  // No server needed — YouTube IFrame API loads playlists directly
+  const channels = [
+    {ch:1,  name:"TVF Originals",  cat:"OTT",    lang:"Hindi",  playlistId:"UUNyeSfUfffmJXwA2_tmNG9A", desc:"Panchayat, Kota Factory, Aspirants & more"},
+    {ch:2,  name:"Dice Media",     cat:"OTT",    lang:"Hindi",  playlistId:"UU7IMq6lLHbptAnSucW1pClA", desc:"Little Things, Operation MBBS & more"},
+    {ch:3,  name:"Girliyapa",      cat:"OTT",    lang:"Hindi",  playlistId:"UUNJcSUSzUeFm8W9P7UUlSeQ", desc:"TVF's women-led comedy channel"},
+    {ch:4,  name:"Sony SET India", cat:"OTT",    lang:"Hindi",  playlistId:"UUpEhnqL0y41EpW2TvWAHD7Q", desc:"CID, Taarak Mehta, KBC full episodes"},
+    {ch:5,  name:"SonyLIV",        cat:"OTT",    lang:"Hindi",  playlistId:"UUOQNJjhXwvAScuELTT_i7cQ", desc:"Scam 1992, Rocket Boys, Gullak"},
+    {ch:6,  name:"MX Player",      cat:"OTT",    lang:"Hindi",  playlistId:"UU6q2O2pOJ-LiFKm4w2EW73w", desc:"Aashram, Raktanchal, Campus Diaries"},
+    {ch:7,  name:"Amazon miniTV",  cat:"OTT",    lang:"Hindi",  playlistId:"UUXx65thnOelDlV5dFM-A-9A", desc:"Free originals & short films"},
+    {ch:8,  name:"Zee5",           cat:"OTT",    lang:"Hindi",  playlistId:"UUXOgAl4w-FQero1ERbGHpXQ", desc:"Zee5 originals & shows"},
+    {ch:9,  name:"Stage",          cat:"OTT",    lang:"Hindi",  playlistId:"UUFOvK1jc0KoaHtNNJjhSyLA", desc:"Stand-up, sketches & originals"},
+    {ch:10, name:"FilterCopy",     cat:"Comedy", lang:"Hindi",  playlistId:"UUC89oVFqenaffhBoyqxd6qw", desc:"Relatable sketches & short films"},
+    {ch:11, name:"BB Ki Vines",    cat:"Comedy", lang:"Hindi",  playlistId:"UUUxNHDxPFjuKMdMPAsYVJMQ", desc:"Bhuvan Bam's comedy universe"},
+    {ch:12, name:"Round2Hell",     cat:"Comedy", lang:"Hindi",  playlistId:"UUOjRVCxaNntzhUhwUF-xCFA", desc:"Sketch comedy & viral videos"},
+    {ch:13, name:"Comicstaan",     cat:"Comedy", lang:"Hindi",  playlistId:"UUp2unPosbRMp4qsQNIZQ7oQ", desc:"Stand-up comedy from Amazon"},
+    {ch:14, name:"Zakir Khan",     cat:"Comedy", lang:"Hindi",  playlistId:"UUkS7Vxu4PjM99w0Is6idjcg", desc:"Sakht launda stand-up & vlogs"},
+    {ch:15, name:"Shemaroo",       cat:"Movies", lang:"Hindi",  playlistId:"UUyA7Ut9tuAHxxmRqrsu9HDQ", desc:"Full Bollywood movies & scenes free"},
+    {ch:16, name:"YRF Movies",     cat:"Movies", lang:"Hindi",  playlistId:"UUU8LF98Njvux51LYGLgXiaw", desc:"Yash Raj Films - full movies & songs"},
+    {ch:17, name:"Allu Arjun",     cat:"Movies", lang:"Telugu", playlistId:"UULiwEQsSEmXe4ShFVJk_hAQ", desc:"Pushpa, Ala Vaikunthapurramuloo clips"},
+    {ch:18, name:"ABP Studios",    cat:"OTT",    lang:"Hindi",  playlistId:"UUiEhTEINhyi0JJwmi1Ekn9w", desc:"ABP originals & web series"},
+    {ch:19, name:"Mahabharat",     cat:"OTT",    lang:"Hindi",  playlistId:"UU8xZGtXSrtbxg4WvtSpSXcA", desc:"BR Chopra's Mahabharat - all episodes"},
+  ];
+
+  let currentIndex = 0;
+  let bannerTimeout = null;
+  let numberBuffer = '';
+  let numberTimeout = null;
+  let guideOpen = false;
+  let activeFilter = 'All';
+  let ytPlayer = null;
+  let ytReady = false;
+  let errorCount = 0;
+  const MAX_ERRORS = 5;
+  let skipAttempts = 0;
+  const MAX_SKIP = 19;
+  const failedChannels = new Set();
+
+  const $ = id => document.getElementById(id);
+  const banner = $('channel-banner');
+  const staticOverlay = $('static-overlay');
+  const staticCanvas = $('static-canvas');
+  const guide = $('guide');
+  const numberInput = $('number-input');
+  const numberDisplay = $('number-display');
+  const errorOverlay = $('error-overlay');
+
+  // Load YouTube IFrame API
+  const tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+
+  window.onYouTubeIframeAPIReady = function () {
+    ytPlayer = new YT.Player('yt-player', {
+      width: '100%',
+      height: '100%',
+      playerVars: {
+        autoplay: 1,
+        controls: 1,
+        disablekb: 0,
+        fs: 1,
+        iv_load_policy: 3,
+        modestbranding: 1,
+        rel: 0,
+        playsinline: 1,
+        origin: window.location.origin,
+      },
+      events: {
+        onReady: onPlayerReady,
+        onStateChange: onPlayerStateChange,
+        onError: onPlayerError,
+      },
+    });
+  };
+
+  function onPlayerReady() {
+    ytReady = true;
+    ytPlayer.mute();
+    $('btn-mute').textContent = 'UNMUTE';
+    buildGuide();
+    tuneToChannel(0);
+  }
+
+  let tuneSeq = 0;
+  let switchDebounce = null;
+
+  function tuneToChannel(index) {
+    if (!channels.length) return;
+    index = ((index % channels.length) + channels.length) % channels.length;
+    currentIndex = index;
+    const ch = channels[index];
+    const seq = ++tuneSeq;
+    errorCount = 0;
+
+    hideError();
+    showBanner(ch);
+    showStatic();
+    updateGuideActive();
+
+    clearTimeout(switchDebounce);
+    switchDebounce = setTimeout(() => {
+      if (seq !== tuneSeq) return;
+      loadChannel(ch, seq);
+    }, 200);
+  }
+
+  function loadChannel(ch, seq) {
+    if (!ytReady || !ytPlayer) return;
+
+    if (ch.playlistId) {
+      // Load YouTube uploads playlist directly — no scraping needed!
+      ytPlayer.loadPlaylist({
+        list: ch.playlistId,
+        listType: 'playlist',
+        index: Math.floor(Math.random() * 50), // random start position
+      });
+
+      // Wait for playback to start
+      const checkPlaying = setInterval(() => {
+        if (seq !== tuneSeq) { clearInterval(checkPlaying); return; }
+        try {
+          const state = ytPlayer.getPlayerState();
+          if (state === YT.PlayerState.PLAYING) {
+            clearInterval(checkPlaying);
+            hideStatic();
+            skipAttempts = 0;
+          }
+        } catch (e) {}
+      }, 300);
+
+      // Timeout — hide static after 10s regardless
+      setTimeout(() => {
+        clearInterval(checkPlaying);
+        if (seq !== tuneSeq) return;
+        hideStatic();
+        try {
+          const state = ytPlayer.getPlayerState();
+          if (state === YT.PlayerState.CUED || state === YT.PlayerState.PAUSED || state === -1) {
+            ytPlayer.playVideo();
+          }
+        } catch (e) {}
+      }, 10000);
+    }
+  }
+
+  function onPlayerStateChange(event) {
+    if (event.data === YT.PlayerState.PLAYING) {
+      hideStatic();
+      hideError();
+      errorCount = 0;
+    }
+    if (event.data === YT.PlayerState.ENDED) {
+      ytPlayer.nextVideo();
+    }
+  }
+
+  function onPlayerError(event) {
+    console.log('YT error:', event.data);
+    errorCount++;
+    if (errorCount < MAX_ERRORS && ytPlayer) {
+      ytPlayer.nextVideo();
+    } else {
+      const ch = channels[currentIndex];
+      if (ch) failedChannels.add(ch.playlistId);
+      skipAttempts++;
+      if (skipAttempts < MAX_SKIP) {
+        console.log('Too many errors on ' + (ch ? ch.name : '?') + ', skipping...');
+        tuneToChannel(currentIndex + 1);
+      } else {
+        hideStatic();
+        if (ch) showError(ch.name + ' (videos blocked)');
+      }
+    }
+  }
+
+  // Banner
+  function showBanner(ch) {
+    $('banner-number').textContent = ch.ch;
+    $('banner-name').textContent = ch.name;
+    $('banner-desc').textContent = ch.desc || '';
+    $('banner-meta').textContent = ch.lang + ' \u2022 ' + ch.cat;
+    $('banner-category').textContent = ch.cat;
+    banner.classList.remove('hidden', 'hiding');
+    clearTimeout(bannerTimeout);
+    bannerTimeout = setTimeout(() => {
+      banner.classList.add('hiding');
+      setTimeout(() => banner.classList.add('hidden'), 300);
+    }, 4000);
+  }
+
+  function showError(name) {
+    errorOverlay.classList.remove('hidden');
+    $('error-channel-name').textContent = name;
+  }
+  function hideError() { errorOverlay.classList.add('hidden'); }
+
+  // Static
+  function showStatic() {
+    staticOverlay.classList.remove('hidden');
+    drawStatic();
+  }
+  function hideStatic() { staticOverlay.classList.add('hidden'); }
+
+  function drawStatic() {
+    const ctx = staticCanvas.getContext('2d');
+    const w = staticCanvas.width = 320;
+    const h = staticCanvas.height = 240;
+    function frame() {
+      if (staticOverlay.classList.contains('hidden')) return;
+      const imageData = ctx.createImageData(w, h);
+      const buf = new Uint32Array(imageData.data.buffer);
+      for (let i = 0; i < buf.length; i++) {
+        const v = (Math.random() * 255) | 0;
+        buf[i] = 0xFF000000 | (v << 16) | (v << 8) | v;
+      }
+      ctx.putImageData(imageData, 0, 0);
+      requestAnimationFrame(frame);
+    }
+    frame();
+  }
+
+  // Navigation
+  function nextChannel() { tuneToChannel(currentIndex + 1); }
+  function prevChannel() { tuneToChannel(currentIndex - 1); }
+  function goToChannelNumber(num) {
+    const idx = channels.findIndex(c => c.ch === num);
+    if (idx !== -1) tuneToChannel(idx);
+  }
+
+  function handleNumber(digit) {
+    numberBuffer += digit;
+    numberDisplay.textContent = numberBuffer;
+    numberInput.classList.remove('hidden');
+    clearTimeout(numberTimeout);
+    numberTimeout = setTimeout(() => {
+      const num = parseInt(numberBuffer, 10);
+      numberBuffer = '';
+      numberInput.classList.add('hidden');
+      if (num >= 1 && num <= channels.length) goToChannelNumber(num);
+    }, 1200);
+  }
+
+  // Guide
+  function buildGuide() {
+    const list = $('guide-list');
+    list.innerHTML = '';
+    const filtered = activeFilter === 'All' ? channels : channels.filter(c => c.cat === activeFilter);
+    filtered.forEach(ch => {
+      const i = channels.indexOf(ch);
+      const item = document.createElement('div');
+      item.className = 'guide-item' + (i === currentIndex ? ' active' : '');
+      item.innerHTML =
+        '<span class="guide-ch">' + ch.ch + '</span>' +
+        '<div class="guide-info"><div class="guide-name">' + ch.name + '</div><div class="guide-desc">' + (ch.desc || '') + '</div></div>' +
+        '<span class="guide-cat">' + ch.cat + '</span>';
+      item.onclick = () => { tuneToChannel(i); toggleGuide(); };
+      list.appendChild(item);
+    });
+  }
+
+  function updateGuideActive() {
+    document.querySelectorAll('.guide-item').forEach(el => {
+      const chNum = parseInt(el.querySelector('.guide-ch').textContent, 10);
+      el.classList.toggle('active', channels[currentIndex] && chNum === channels[currentIndex].ch);
+    });
+  }
+
+  function toggleGuide() {
+    guideOpen = !guideOpen;
+    guide.classList.toggle('hidden', !guideOpen);
+    if (guideOpen) {
+      buildGuide();
+      setTimeout(() => {
+        const active = guide.querySelector('.guide-item.active');
+        if (active) active.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, 100);
+    }
+  }
+
+  // Expose for Android back button
+  window.handleAndroidBack = function() {
+    if (guideOpen) { toggleGuide(); return true; }
+    return false;
+  };
+
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter = btn.dataset.cat;
+      buildGuide();
+    };
+  });
+
+  $('guide-close').onclick = toggleGuide;
+  $('btn-ch-up').onclick = prevChannel;
+  $('btn-ch-down').onclick = nextChannel;
+  $('btn-guide-toggle').onclick = toggleGuide;
+  $('btn-mute').onclick = () => {
+    if (!ytPlayer) return;
+    if (ytPlayer.isMuted()) { ytPlayer.unMute(); $('btn-mute').textContent = 'MUTE'; }
+    else { ytPlayer.mute(); $('btn-mute').textContent = 'UNMUTE'; }
+  };
+
+  // Keyboard
+  document.addEventListener('keydown', e => {
+    if (guideOpen && (e.key === 'Escape' || e.keyCode === 4)) { toggleGuide(); return; }
+    if (guideOpen) return;
+    switch (e.key) {
+      case 'ArrowUp': case 'k': e.preventDefault(); prevChannel(); break;
+      case 'ArrowDown': case 'j': e.preventDefault(); nextChannel(); break;
+      case 'g': case 'G': toggleGuide(); break;
+      case 'm': case 'M':
+        if (!ytPlayer) break;
+        if (ytPlayer.isMuted()) { ytPlayer.unMute(); $('btn-mute').textContent = 'MUTE'; }
+        else { ytPlayer.mute(); $('btn-mute').textContent = 'UNMUTE'; }
+        break;
+      case 'f': case 'F':
+        if (document.fullscreenElement) document.exitFullscreen();
+        else document.documentElement.requestFullscreen();
+        break;
+      case ' ':
+        e.preventDefault();
+        if (!ytPlayer) break;
+        const state = ytPlayer.getPlayerState();
+        if (state === YT.PlayerState.PLAYING) ytPlayer.pauseVideo();
+        else ytPlayer.playVideo();
+        break;
+      case 'n': case 'N':
+        if (ytPlayer) ytPlayer.nextVideo();
+        break;
+      default:
+        if (e.key >= '0' && e.key <= '9') handleNumber(e.key);
+    }
+  });
+
+  // Touch swipe
+  let touchStartY = 0;
+  document.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+  document.addEventListener('touchend', e => {
+    const diff = touchStartY - e.changedTouches[0].clientY;
+    if (Math.abs(diff) > 60) { diff > 0 ? nextChannel() : prevChannel(); }
+  }, { passive: true });
+})();
